@@ -1,0 +1,268 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+
+
+namespace pos_console_unit1
+{
+    class Program
+    {
+        public const int SIZE_ITEMS = 20;
+
+        public struct POS_REC
+        {
+            private string user;
+            private string email;
+            private string[] items;
+            private double[] item_prices;
+            private int _ctr;
+
+            public string UserStr
+            {
+                get { return user; }
+                set { user = value; }
+            }
+            public string EmailStr
+            {
+                get { return email; }
+                set { email = value; }
+            }
+
+            public string Item
+            {
+                get { return items[_ctr]; }
+                set { items[_ctr] = value; }
+            }
+
+            public double Price
+            {
+                get { return item_prices[_ctr]; }
+                set { item_prices[_ctr] = value; }
+            }
+
+            public void initItems()
+            {
+                items = new string[SIZE_ITEMS];
+            }
+
+            internal void initPrices()
+            {
+                item_prices = new double[SIZE_ITEMS];
+            }
+
+            public void setItemsPrices(int counter, string item = "", double price = 0.0d)
+            {
+                _ctr = counter;
+                if (price != 0)
+                {
+                    Price = price;
+                }
+                else if (item != string.Empty)
+                    Item = item;
+            }
+
+            public String getItem(int counter)
+            {
+                _ctr = counter;
+                return Item;
+            }
+
+            public double getPrice(int counter)
+            {
+                _ctr = counter;
+                return (Price);
+            }
+        }
+
+        public static POS_REC irec;
+        public static int itemCountValue = 0;
+
+        static void Main(string[] args)
+        {
+            Console.WriteLine("p.o.s unit 1");
+            Console.WriteLine(" requires .net 4.5");
+
+            try
+            {
+                POS_INPUT pi = new POS_INPUT();
+
+                string name = string.Empty;
+                string email = string.Empty;
+                string itemNum = string.Empty;
+                double price = 0.0d;
+
+                Console.WriteLine("Enter name: ");
+                name = Console.ReadLine();
+                Console.WriteLine("Enter email: ");
+                email = Console.ReadLine();
+
+                Console.WriteLine("Enter Items and Prices - up to 20 items allowed - ");
+            retry:
+                Console.WriteLine("Please Enter Count of Items you wish to enter: ");
+                string itemCount = Console.ReadLine();
+
+                if (!int.TryParse(itemCount, out itemCountValue))
+                {
+                    Console.WriteLine("You entered invalid data - program will exit");
+                    Thread.Sleep(2000);
+
+                    return;
+                }
+
+                if (itemCountValue >= SIZE_ITEMS)
+                {
+                    Console.WriteLine("You've entered item count greater than allowed - would you like to re-enter or exit? - /n Enter 'Yes' - To Continue and / No - to Exit ");
+                    string response = Console.ReadLine();
+                    if (response.ToUpper() == "YES")
+                        goto retry;
+                    else
+                    {
+                        return;
+                    }
+                }
+
+                irec.initItems();
+                irec.initPrices();
+
+                for (int ctr = 0; ctr < itemCountValue; ctr++)
+                {
+                    Console.WriteLine("Enter Item #: ");
+                    itemNum = Console.ReadLine();
+                    irec.setItemsPrices(ctr, itemNum);
+                    Console.WriteLine("Enter an Amount: ");
+                    string priceStr = Console.ReadLine();
+                    if (!double.TryParse(priceStr, out price))
+                    {
+                        Console.WriteLine("You entered invalid amount data - program will exit");
+                        Console.ReadLine();
+                        Thread.Sleep(2000);
+
+                        return;
+                    }
+                    else
+                    {
+                        irec.setItemsPrices(ctr, "", price);
+                    }
+                }
+
+                irec.UserStr = name;
+                irec.EmailStr = email;
+
+                pi.setFields(irec);
+
+                pi.printInput();
+
+                pi.LogToDb();
+            } //end of try
+
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                throw;
+            }
+            finally
+            {
+
+            }
+
+        } //end of Main
+
+        private static void memset(double[] prices, int p, int p2)
+        {
+            for (int i = 0; i < p2; i++)
+            {
+                prices[i] = 0.0d;
+            }
+        }
+
+        private static void memset(string[] items, int p1, int p2)
+        {
+            for (int i = 0; i < p2; i++)
+            {
+                items[i] = string.Empty;
+            }
+        }
+    } //end of class Program
+
+    public class POS_INPUT
+    {
+        const int listSize = Program.SIZE_ITEMS;
+        List<Program.POS_REC> posList = new List<Program.POS_REC>(listSize);
+
+        internal void setFields(Program.POS_REC irec)
+        {
+            posList.Add(irec);
+            Console.WriteLine("list count = {0}", posList.Count);
+        }
+
+        internal void printInput()
+        {
+            var _logfile = new System.IO.StreamWriter(@"c:\pos.txt", true);
+
+            Console.WriteLine("\n {0}", new string('*', 50));
+
+            Console.WriteLine("Date: \t{0}", DateTime.Now);
+
+            foreach (Program.POS_REC element in posList)
+            {
+                Program.POS_REC elemRec = element;
+                Console.WriteLine("Name \t{0}", elemRec.UserStr);
+
+                Console.WriteLine("Email: \t{0}", elemRec.EmailStr);
+                for (int i = 0; i < Program.itemCountValue; i++)
+                {
+                    Console.WriteLine("Item # {0} - {1}", i + 1, elemRec.getItem(i));
+                    double amount = elemRec.getPrice(i);
+                    Console.WriteLine("Item Price {0} - {1}", i + 1, amount);
+                    Thread.Sleep(2000);
+                }
+            }
+
+            Thread.Sleep(2000);
+            Console.ReadLine();
+        }
+
+        public void LogToDb()
+        {
+            try
+            {
+                //go to localdb select hit F4
+                var _str = @"Data Source=(localdb)\ProjectsV12;Initial Catalog=pos;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
+                var _sql = @"insert into PosItems(name,email,item,price) values('1','2','3','4')";
+                var _con = new System.Data.SqlClient.SqlConnection(_str);
+                _con.Open();
+
+                Console.WriteLine("+ connection open");
+
+                var _com = _con.CreateCommand();
+
+                foreach (Program.POS_REC element in posList)
+                {
+                    Program.POS_REC elemRec = element;
+
+                    for (int i = 0; i < Program.itemCountValue; i++)
+                    {
+                        double amount = elemRec.getPrice(i);
+                        var tmp = _sql.Replace("1", elemRec.UserStr);
+                        tmp = _sql.Replace("2", elemRec.EmailStr);
+                        tmp = _sql.Replace("3", elemRec.getItem(i));
+                        tmp = _sql.Replace("4", amount.ToString());
+
+                        _com.CommandText = tmp;
+                        _com.ExecuteNonQuery();
+                    }
+                }
+
+                Console.WriteLine("+ Pos logged to db");
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+    } //end of class POS_INPUT
+}
